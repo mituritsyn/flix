@@ -4,11 +4,17 @@
 // Work with the IMU sensor
 
 #include <SPI.h>
-#include <MPU9250.h>
+#include <ICM20948.h>
 #include "lpf.h"
 #include "util.h"
 
-MPU9250 IMU(SPI);
+// SPI pins configuration
+#define SPI_MOSI_PIN 11
+#define SPI_MISO_PIN 13
+#define SPI_SCLK_PIN 12
+#define IMU_CS_PIN   10
+#define IMU_INT_PIN -1//36 //4
+ICM20948 IMU(SPI, IMU_CS_PIN, IMU_INT_PIN);
 
 Vector accBias;
 Vector accScale(1, 1, 1);
@@ -16,6 +22,7 @@ Vector gyroBias;
 
 void setupIMU() {
 	print("Setup IMU\n");
+	SPI.begin(SPI_SCLK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, IMU_CS_PIN);
 	IMU.begin();
 	configureIMU();
 }
@@ -44,7 +51,7 @@ void readIMU() {
 void rotateIMU(Vector& data) {
 	// Rotate from LFD to FLU
 	// NOTE: In case of using other IMU orientation, change this line:
-	data = Vector(data.y, data.x, -data.z);
+	data = Vector(data.y, data.x, data.z);
 	// Axes orientation for various boards: https://github.com/okalachev/flixperiph#imu-axes-orientation
 }
 

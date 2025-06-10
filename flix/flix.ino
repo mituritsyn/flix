@@ -9,6 +9,7 @@
 
 #define SERIAL_BAUDRATE 115200
 #define WIFI_ENABLED 1
+#define PIN_NEOPIXEL 38
 
 double t = NAN; // current step time, s
 float dt; // time delta from previous step, s
@@ -23,6 +24,7 @@ float motors[4]; // normalized motors thrust in range [0..1]
 
 void setup() {
 	Serial.begin(SERIAL_BAUDRATE);
+	neopixelWrite(PIN_NEOPIXEL, RGB_BRIGHTNESS, 0, 0);  // Red
 	print("Initializing flix");
 	disableBrownOut();
 	setupParameters();
@@ -33,7 +35,7 @@ void setup() {
 	setupWiFi();
 #endif
 	setupIMU();
-	setupRC();
+	// setupRC();
 	setLED(false);
 	print("Initializing complete");
 }

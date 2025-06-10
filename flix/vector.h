@@ -13,16 +13,12 @@ public:
 
 	Vector(float x, float y, float z): x(x), y(y), z(z) {};
 
-	bool zero() const {
-		return x == 0 && y == 0 && z == 0;
-	}
-
-	bool finite() const {
-		return isfinite(x) && isfinite(y) && isfinite(z);
-	}
-
 	float norm() const {
 		return sqrt(x * x + y * y + z * z);
+	}
+
+	bool zero() const {
+		return x == 0 && y == 0 && z == 0;
 	}
 
 	void normalize() {
@@ -78,6 +74,10 @@ public:
 		return !(*this == b);
 	}
 
+	bool finite() const {
+		return isfinite(x) && isfinite(y) && isfinite(z);
+	}
+
 	static float dot(const Vector& a, const Vector& b) {
 		return a.x * b.x + a.y * b.y + a.z * b.z;
 	}
@@ -86,18 +86,18 @@ public:
 		return Vector(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
 	}
 
-	static float angleBetween(const Vector& a, const Vector& b) {
+	static float angleBetweenVectors(const Vector& a, const Vector& b) {
 		return acos(constrain(dot(a, b) / (a.norm() * b.norm()), -1, 1));
 	}
 
-	static Vector rotationVectorBetween(const Vector& a, const Vector& b) {
+	static Vector angularRatesBetweenVectors(const Vector& a, const Vector& b) {
 		Vector direction = cross(a, b);
 		if (direction.zero()) {
 			// vectors are opposite, return any perpendicular vector
 			return cross(a, Vector(1, 0, 0));
 		}
 		direction.normalize();
-		float angle = angleBetween(a, b);
+		float angle = angleBetweenVectors(a, b);
 		return direction * angle;
 	}
 

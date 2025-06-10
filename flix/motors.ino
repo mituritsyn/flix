@@ -6,10 +6,10 @@
 
 #include "util.h"
 
-#define MOTOR_0_PIN 12 // rear left
-#define MOTOR_1_PIN 13 // rear right
+#define MOTOR_0_PIN 1  // rear left 
+#define MOTOR_1_PIN 5  // rear right 
 #define MOTOR_2_PIN 14 // front right
-#define MOTOR_3_PIN 15 // front left
+#define MOTOR_3_PIN 18 // front left 
 
 #define PWM_FREQUENCY 1000
 #define PWM_RESOLUTION 12
@@ -57,7 +57,7 @@ bool motorsActive() {
 
 void testMotor(int n) {
 	print("Testing motor %d\n", n);
-	motors[n] = 1;
+	motors[n] = 0.1;
 	delay(50); // ESP32 may need to wait until the end of the current cycle to change duty https://github.com/espressif/arduino-esp32/issues/5306
 	sendMotors();
 	pause(3);
