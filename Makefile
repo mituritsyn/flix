@@ -1,7 +1,7 @@
-BOARD = esp32:esp32:d1_mini32
-PORT := $(wildcard /dev/serial/by-id/usb-Silicon_Labs_CP21* /dev/serial/by-id/usb-1a86_USB_Single_Serial_* /dev/cu.usbserial-*)
+BOARD = esp32:esp32:adafruit_feather_esp32s3
+PORT := $(wildcard /dev/serial/by-id/usb-Silicon_Labs_CP21* /dev/serial/by-id/usb-1a86_USB_Single_Serial_* /dev/cu.usbserial-* /dev/serial/by-id/usb-Adafruit_Feather_ESP32-S3* /dev/serial/by-id/usb-Espressif_USB_JTAG_serial_debug_unit_34:85:18:82:24:24-if00)
 PORT := $(strip $(PORT))
-
+# SDL_GAMECONTROLLERCONFIG="030068cd09120000544f000011010000,OpenTX FrSky Taranis Joystick,a:b0,b:b1,x:b3,y:b4,back:b10,guide:b12,start:b11,leftstick:b13,rightstick:b14,leftshoulder:b6,rightshoulder:b7,leftx:a0,lefty:a1,rightx:a2,righty:a3,lefttrigger:a4,righttrigger:a5,crc:cd68,platform:Linux" ./QGroundControl.AppImage
 build: .dependencies
 	arduino-cli compile --fqbn $(BOARD) flix
 

@@ -3,132 +3,140 @@
 
 // Work with the IMU sensor
 
+#include <ICM42688.h>
 #include <SPI.h>
-#include <MPU9250.h>
-#include "util.h"
 
-MPU9250 IMU(SPI);
+#include "lpf.h"
+#include "vector.h"
+
+#define ONE_G 9.80665
+#define DEG2RAD 3.14159265358979323846264338327950288f/180.0f;
+#define SPIDEV_HOST SPI3_HOST
+// #define SPIDEV_MOSI_PIN GPIO_NUM_39
+// #define SPIDEV_MISO_PIN GPIO_NUM_38
+// #define SPIDEV_CLK_PIN 	GPIO_NUM_40
+// #define SPIDEV_CS 		GPIO_NUM_41
+
+#define SPIDEV_MOSI_PIN GPIO_NUM_37
+#define SPIDEV_MISO_PIN GPIO_NUM_36
+#define SPIDEV_CLK_PIN GPIO_NUM_38
+#define SPIDEV_CS GPIO_NUM_39
+
+#define SPI_HS_CLOCK 24 * 1000 * 1000  // 24 МГц
+#define SPI_LS_CLOCK 1000000           // 1 МГц
 
 Vector accBias;
 Vector gyroBias;
 Vector accScale(1, 1, 1);
 
+static const uint8_t CS_PIN = SPIDEV_CS;
+static const uint8_t MOSI_PIN = SPIDEV_MOSI_PIN;
+static const uint8_t MISO_PIN = SPIDEV_MISO_PIN;
+static const uint8_t SCLK_PIN = SPIDEV_CLK_PIN;
+// static SPIClass spi = SPIClass(HSPI);
+
+ICM42688 IMU(SPI, CS_PIN, SPI_HS_CLOCK);
+
 void setupIMU() {
-	Serial.println("Setup IMU");
-	bool status = IMU.begin();
-	if (!status) {
-		while (true) {
-			Serial.println("IMU begin error");
-			delay(1000);
-		}
-	}
-	configureIMU();
-	delay(500); // wait a bit before calibrating
-	calibrateGyro();
+  SPI.begin(SCLK_PIN, MISO_PIN, MOSI_PIN, CS_PIN);
+  Serial.println("Setup IMU");
+  bool status = IMU.begin();
+  if (status < 0) {
+    while (true) {
+      Serial.println("IMU begin error");
+      delay(1000);
+    }
+  }
+  // 	gyro bias: -0.616379, -0.257088, 0.424461
+  // accel bias: -0.001576, 0.000501, 0.038439
+  // accel scale: 0.999742, 1.000630, 1.001210
+
+  IMU.setAccelCalX(-0.001576, 0.999742);
+  IMU.setAccelCalY(0.000501, 1.000630);
+  IMU.setAccelCalZ(0.038439, 1.001210);
+  Serial.println("IMU started");
+  Serial.println("setup IMU filters");
+  if (IMU.setGyroLPF() != 1) {
+    Serial.println("gyro lpf error");
+  }
+  IMU.calibrateGyro();
 }
 
 void configureIMU() {
-	IMU.setAccelRange(IMU.ACCEL_RANGE_4G);
-	IMU.setGyroRange(IMU.GYRO_RANGE_2000DPS);
-	IMU.setDLPF(IMU.DLPF_MAX);
-	IMU.setRate(IMU.RATE_1KHZ_APPROX);
+  IMU.setGyroFS(IMU.dps2000);
+  IMU.setAccelFS(IMU.gpm4);
+  IMU.setGyroODR(IMU.odr1k);
+  IMU.setAccelODR(IMU.odr1k);
+  IMU.setFilters(true, true);
+  IMU.disableDataReadyInterrupt();
 }
 
 void readIMU() {
-	IMU.waitForData();
-	IMU.getGyro(gyro.x, gyro.y, gyro.z);
-	IMU.getAccel(acc.x, acc.y, acc.z);
-	// apply scale and bias
-	acc = (acc - accBias) / accScale;
-	gyro = gyro - gyroBias;
-	// rotate
-	rotateIMU(acc);
-	rotateIMU(gyro);
-}
+  IMU.getAGT();
 
-void rotateIMU(Vector& data) {
-	// Rotate from LFD to FLU
-	// NOTE: In case of using other IMU orientation, change this line:
-	data = Vector(data.y, data.x, -data.z);
-	// Axes orientation for various boards: https://github.com/okalachev/flixperiph#imu-axes-orientation
+  // Преобразование гироскопа
+  float original_gyrX = IMU.gyrX() * DEG2RAD;
+  float original_gyrY = IMU.gyrY() * DEG2RAD;
+  float original_gyrZ = IMU.gyrZ() * DEG2RAD;
+  gyro.x = -original_gyrY;
+  gyro.y = original_gyrX;
+  gyro.z = original_gyrZ;
+
+  // Преобразование акселерометра
+  float original_accX = IMU.accX();
+  float original_accY = IMU.accY();
+  float original_accZ = IMU.accZ();
+
+  acc.x = -original_accY * ONE_G;
+  acc.y = original_accX * ONE_G;
+  acc.z = original_accZ * ONE_G;
 }
 
 void calibrateGyro() {
-	const int samples = 1000;
-	Serial.println("Calibrating gyro, stand still");
-	IMU.setGyroRange(IMU.GYRO_RANGE_250DPS); // the most sensitive mode
-
-	gyroBias = Vector(0, 0, 0);
-	for (int i = 0; i < samples; i++) {
-		IMU.waitForData();
-		IMU.getGyro(gyro.x, gyro.y, gyro.z);
-		gyroBias = gyroBias + gyro;
-	}
-	gyroBias = gyroBias / samples;
-
-	printIMUCal();
-	configureIMU();
+  IMU.calibrateGyro();
+  printIMUCal();
 }
 
 void calibrateAccel() {
-	Serial.println("Calibrating accelerometer");
-	IMU.setAccelRange(IMU.ACCEL_RANGE_2G); // the most sensitive mode
+  Serial.setTimeout(60000);
+  Serial.print("Place level [enter] ");
+  Serial.readStringUntil('\n');
+  calibrateAccelOnce();
+  Serial.print("Place nose up [enter] ");
+  Serial.readStringUntil('\n');
+  calibrateAccelOnce();
+  Serial.print("Place nose down [enter] ");
+  Serial.readStringUntil('\n');
+  calibrateAccelOnce();
+  Serial.print("Place on right side [enter] ");
+  Serial.readStringUntil('\n');
+  calibrateAccelOnce();
+  Serial.print("Place on left side [enter] ");
+  Serial.readStringUntil('\n');
+  calibrateAccelOnce();
+  Serial.print("Place upside down [enter] ");
+  Serial.readStringUntil('\n');
+  calibrateAccelOnce();
 
-	Serial.setTimeout(60000);
-	Serial.print("Place level [enter] "); Serial.readStringUntil('\n');
-	calibrateAccelOnce();
-	Serial.print("Place nose up [enter] "); Serial.readStringUntil('\n');
-	calibrateAccelOnce();
-	Serial.print("Place nose down [enter] "); Serial.readStringUntil('\n');
-	calibrateAccelOnce();
-	Serial.print("Place on right side [enter] "); Serial.readStringUntil('\n');
-	calibrateAccelOnce();
-	Serial.print("Place on left side [enter] "); Serial.readStringUntil('\n');
-	calibrateAccelOnce();
-	Serial.print("Place upside down [enter] "); Serial.readStringUntil('\n');
-	calibrateAccelOnce();
-
-	printIMUCal();
-	configureIMU();
+  printIMUCal();
 }
 
-void calibrateAccelOnce() {
-	const int samples = 1000;
-	static Vector accMax(-INFINITY, -INFINITY, -INFINITY);
-	static Vector accMin(INFINITY, INFINITY, INFINITY);
-
-	// Compute the average of the accelerometer readings
-	acc = Vector(0, 0, 0);
-	for (int i = 0; i < samples; i++) {
-		IMU.waitForData();
-		Vector sample;
-		IMU.getAccel(sample.x, sample.y, sample.z);
-		acc = acc + sample;
-	}
-	acc = acc / samples;
-
-	// Update the maximum and minimum values
-	if (acc.x > accMax.x) accMax.x = acc.x;
-	if (acc.y > accMax.y) accMax.y = acc.y;
-	if (acc.z > accMax.z) accMax.z = acc.z;
-	if (acc.x < accMin.x) accMin.x = acc.x;
-	if (acc.y < accMin.y) accMin.y = acc.y;
-	if (acc.z < accMin.z) accMin.z = acc.z;
-	Serial.printf("acc %f %f %f\n", acc.x, acc.y, acc.z);
-	Serial.printf("max %f %f %f\n", accMax.x, accMax.y, accMax.z);
-	Serial.printf("min %f %f %f\n", accMin.x, accMin.y, accMin.z);
-	// Compute scale and bias
-	accScale = (accMax - accMin) / 2 / ONE_G;
-	accBias = (accMax + accMin) / 2;
-}
+void calibrateAccelOnce() { IMU.calibrateAccel(); }
 
 void printIMUCal() {
-	Serial.printf("gyro bias: %f %f %f\n", gyroBias.x, gyroBias.y, gyroBias.z);
-	Serial.printf("accel bias: %f %f %f\n", accBias.x, accBias.y, accBias.z);
-	Serial.printf("accel scale: %f %f %f\n", accScale.x, accScale.y, accScale.z);
+  Serial.printf("gyro bias: %f, %f, %f\n", IMU.getGyroBiasX(),
+                IMU.getGyroBiasY(), IMU.getGyroBiasZ());
+  Serial.printf("accel bias: %f, %f, %f\n", IMU.getAccelBiasX_mss(),
+                IMU.getAccelBiasY_mss(), IMU.getAccelBiasZ_mss());
+  Serial.printf("accel scale: %f, %f, %f\n", IMU.getAccelScaleFactorX(),
+                IMU.getAccelScaleFactorY(), IMU.getAccelScaleFactorZ());
 }
 
-void printIMUInfo() {
-	Serial.printf("model: %s\n", IMU.getModel());
-	Serial.printf("who am I: 0x%02X\n", IMU.whoAmI());
+void plotGyro() {
+  while (true) {
+    Serial.println(IMU.gyrX());
+    delay(100);
+  }
 }
+
+void printIMUInfo() { Serial.printf("who am I: 0x%02X\n", IMU.whoAmI()); }

@@ -12,6 +12,7 @@
 #define RATES_LFP_ALPHA 0.2 // cutoff frequency ~ 40 Hz
 
 LowPassFilter<Vector> ratesFilter(RATES_LFP_ALPHA);
+// Quaternion imuRotation = Quaternion::fromAxisAngle(Vector(0, 0, 1), -M_PI / 2);
 
 void estimate() {
 	applyGyro();
