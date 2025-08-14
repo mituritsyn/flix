@@ -8,13 +8,7 @@
 #include "lpf.h"
 #include "util.h"
 
-// SPI pins configuration
-#define SPI_MOSI_PIN 11
-#define SPI_MISO_PIN 13
-#define SPI_SCLK_PIN 12
-#define IMU_CS_PIN   10
-#define IMU_INT_PIN -1//36 //4
-ICM20948 IMU(SPI, IMU_CS_PIN, IMU_INT_PIN);
+ICM20948 IMU(SPI);
 
 Vector accBias;
 Vector accScale(1, 1, 1);
@@ -22,7 +16,6 @@ Vector gyroBias;
 
 void setupIMU() {
 	print("Setup IMU\n");
-	SPI.begin(SPI_SCLK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, IMU_CS_PIN);
 	IMU.begin();
 	configureIMU();
 }
