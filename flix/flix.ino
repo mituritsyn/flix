@@ -8,7 +8,7 @@
 #include "util.h"
 
 #define SERIAL_BAUDRATE 115200
-#define WIFI_ENABLED 1
+#define WIFI_ENABLED 0
 #define PIN_NEOPIXEL 38
 
 double t = NAN; // current step time, s
@@ -33,6 +33,8 @@ void setup() {
 	setLED(true);
 #if WIFI_ENABLED
 	setupWiFi();
+#else
+	setupEspNowRX();
 #endif
 	setupIMU();
 	// setupRC();
@@ -50,6 +52,8 @@ void loop() {
 	handleInput();
 #if WIFI_ENABLED
 	processMavlink();
+#else
+	readEspNowRX();
 #endif
 	logData();
 	syncParameters();
