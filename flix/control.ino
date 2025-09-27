@@ -73,26 +73,15 @@ void control() {
 }
 
 void applyRates() {
-	armed = controlThrottle >= 0.05 && controlArmed >= 0.5;
+	if (controlThrottle < 0.05 && controlYaw > 0.95) armed = true; // arm gesture
+	if (controlThrottle < 0.05 && controlYaw < -0.95) armed = false; // disarm gesture
 
 	thrustTarget = controlThrottle;
 
-	if (mode == STAB) {
-		float yawTarget = attitudeTarget.getYaw();
-		if (invalid(yawTarget) || controlYaw != 0) yawTarget = attitude.getYaw(); // reset yaw target if NAN or pilot commands yaw rate
-		attitudeTarget = Quaternion::fromEuler(Vector(controlRoll * tiltMax, controlPitch * tiltMax, yawTarget));
-		ratesExtra = Vector(0, 0, -controlYaw * maxRate.z); // positive yaw stick means clockwise rotation in FLU
-	}
-
-	yawMode = YAW_RATE;
+	attitudeTarget.invalidate(); // skip attitude control
 	ratesTarget.x = controlRoll * maxRate.x;
 	ratesTarget.y = controlPitch* maxRate.y;
 	ratesTarget.z = -controlYaw * maxRate.z; // positive yaw stick means clockwise rotation in FLU
-
-	if (yawMode == YAW_RATE || !motorsActive()) {
-		// update yaw target as we don't have control over the yaw
-		attitudeTarget.setYaw(attitude.getYaw());
-	}
 }
 
 
