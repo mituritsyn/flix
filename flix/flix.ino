@@ -6,9 +6,11 @@
 #include "vector.h"
 #include "quaternion.h"
 #include "util.h"
+#include <esp_now.h>
+#include <WiFi.h>
 
 #define SERIAL_BAUDRATE 115200
-#define WIFI_ENABLED 0
+#define WIFI_ENABLED 1
 #define PIN_NEOPIXEL 38
 
 double t = NAN; // current step time, s
@@ -24,7 +26,7 @@ float motors[4]; // normalized motors thrust in range [0..1]
 
 void setup() {
 	Serial.begin(SERIAL_BAUDRATE);
-	neopixelWrite(PIN_NEOPIXEL, RGB_BRIGHTNESS, 0, 0);  // Red
+	neopixelWrite(PIN_NEOPIXEL, 0, 255, 0);  // Red
 	print("Initializing flix\n");
 	disableBrownOut();
 	setupParameters();
@@ -34,7 +36,7 @@ void setup() {
 #if WIFI_ENABLED
 	setupWiFi();
 #else
-	setupEspNowRX();
+	// setupEspNowRX();
 #endif
 	setupIMU();
 	// setupRC();
@@ -53,7 +55,7 @@ void loop() {
 #if WIFI_ENABLED
 	processMavlink();
 #else
-	readEspNowRX();
+	// readEspNowRX();
 #endif
 	logData();
 	syncParameters();
