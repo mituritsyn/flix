@@ -1,4 +1,3 @@
-// const int MOTOR_PINS[] = {1, 5, 14, 18}; 
 // Copyright (c) 2023 Oleg Kalachev <okalachev@gmail.com>
 // Repository: https://github.com/okalachev/flix
 
@@ -12,7 +11,7 @@
 #define MOTOR_2_PIN 14 // front right
 #define MOTOR_3_PIN 18 // front left
 
-#define PWM_FREQUENCY 78000
+#define PWM_FREQUENCY 8000
 #define PWM_RESOLUTION 10
 #define PWM_STOP 0
 #define PWM_MIN 0

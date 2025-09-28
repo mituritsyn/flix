@@ -10,7 +10,7 @@
 #include <WiFi.h>
 
 #define SERIAL_BAUDRATE 115200
-#define WIFI_ENABLED 1
+#define WIFI_ENABLED 0
 #define PIN_NEOPIXEL 38
 
 double t = NAN; // current step time, s
@@ -36,7 +36,7 @@ void setup() {
 #if WIFI_ENABLED
 	setupWiFi();
 #else
-	// setupEspNowRX();
+	setupEspNowRX();
 #endif
 	setupIMU();
 	// setupRC();
@@ -55,7 +55,7 @@ void loop() {
 #if WIFI_ENABLED
 	processMavlink();
 #else
-	// readEspNowRX();
+	readEspNowRX();
 #endif
 	logData();
 	syncParameters();
