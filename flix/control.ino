@@ -58,41 +58,101 @@ extern const int MOTOR_REAR_LEFT, MOTOR_REAR_RIGHT, MOTOR_FRONT_RIGHT, MOTOR_FRO
 extern float controlRoll, controlPitch, controlThrottle, controlYaw, controlMode;
 
 void control() {
-	applyRates();
+	interpretControls();
 	failsafe();
-
-	if (!armed) {
-		rollRatePID.reset();
-		pitchRatePID.reset();
-		yawRatePID.reset();
-		memset(motors, 0, sizeof(motors));
-		return;
-	}
-
-	controlRate();
+	controlAttitude();
+	controlRates();
+	controlTorque();
 }
 
-void applyRates() {
+void interpretControls() {
+	// NOTE: put ACRO or MANUAL modes there if you want to use them
+	if (controlMode < 0.25) mode = STAB;
+	if (controlMode < 0.75) mode = STAB;
+	if (controlMode > 0.75) mode = STAB;
+
+	if (mode == AUTO) return; // pilot is not effective in AUTO mode
+
 	if (controlThrottle < 0.05 && controlYaw > 0.95) armed = true; // arm gesture
 	if (controlThrottle < 0.05 && controlYaw < -0.95) armed = false; // disarm gesture
 
 	thrustTarget = controlThrottle;
 
-	attitudeTarget.invalidate(); // skip attitude control
-	ratesTarget.x = controlRoll * maxRate.x;
-	ratesTarget.y = controlPitch* maxRate.y;
-	ratesTarget.z = -controlYaw * maxRate.z; // positive yaw stick means clockwise rotation in FLU
+	if (mode == STAB) {
+		float yawTarget = attitudeTarget.getYaw();
+		if (invalid(yawTarget) || controlYaw != 0) yawTarget = attitude.getYaw(); // reset yaw target if NAN or pilot commands yaw rate
+		attitudeTarget = Quaternion::fromEuler(Vector(controlRoll * tiltMax, controlPitch * tiltMax, yawTarget));
+		ratesExtra = Vector(0, 0, -controlYaw * maxRate.z); // positive yaw stick means clockwise rotation in FLU
+	}
+
+	if (mode == ACRO) {
+		attitudeTarget.invalidate(); // skip attitude control
+		ratesTarget.x = controlRoll * maxRate.x;
+		ratesTarget.y = controlPitch * maxRate.y;
+		ratesTarget.z = -controlYaw * maxRate.z; // positive yaw stick means clockwise rotation in FLU
+	}
+
+	if (mode == MANUAL) { // passthrough mode
+		attitudeTarget.invalidate(); // skip attitude control
+		ratesTarget.invalidate(); // skip rate control
+		torqueTarget = Vector(controlRoll, controlPitch, -controlYaw) * 0.01;
+	}
+}
+
+void controlAttitude() {
+	if (!armed || attitudeTarget.invalid()) { // skip attitude control
+		rollPID.reset();
+		pitchPID.reset();
+		yawPID.reset();
+		return;
+	}
+
+	const Vector up(0, 0, 1);
+	Vector upActual = Quaternion::rotateVector(up, attitude);
+	Vector upTarget = Quaternion::rotateVector(up, attitudeTarget);
+
+	Vector error = Vector::rotationVectorBetween(upTarget, upActual);
+
+	ratesTarget.x = rollPID.update(error.x, dt) + ratesExtra.x;
+	ratesTarget.y = pitchPID.update(error.y, dt) + ratesExtra.y;
+
+	float yawError = wrapAngle(attitudeTarget.getYaw() - attitude.getYaw());
+	ratesTarget.z = yawPID.update(yawError, dt) + ratesExtra.z;
 }
 
 
+void controlRates() {
+	if (!armed || ratesTarget.invalid()) { // skip rates control
+		rollRatePID.reset();
+		pitchRatePID.reset();
+		yawRatePID.reset();
+		return;
+	}
 
-void controlRate() {
 	Vector error = ratesTarget - rates;
 
 	// Calculate desired torque, where 0 - no torque, 1 - maximum possible torque
 	torqueTarget.x = rollRatePID.update(error.x, dt);
 	torqueTarget.y = pitchRatePID.update(error.y, dt);
 	torqueTarget.z = yawRatePID.update(error.z, dt);
+}
+
+void controlTorque() {
+	if (!torqueTarget.valid()) return; // skip torque control
+
+	if (!armed) {
+		memset(motors, 0, sizeof(motors)); // stop motors if disarmed
+		return;
+	}
+
+	if (thrustTarget < 0.05) {
+		// minimal thrust to indicate armed state
+		motors[0] = ARMED_THRUST;
+		motors[1] = ARMED_THRUST;
+		motors[2] = ARMED_THRUST;
+		motors[3] = ARMED_THRUST;
+		return;
+	}
 
 	motors[MOTOR_FRONT_LEFT] = thrustTarget + torqueTarget.x - torqueTarget.y + torqueTarget.z;
 	motors[MOTOR_FRONT_RIGHT] = thrustTarget - torqueTarget.x - torqueTarget.y - torqueTarget.z;

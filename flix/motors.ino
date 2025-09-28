@@ -58,7 +58,7 @@ bool motorsActive() {
 
 void testMotor(int n) {
 	print("Testing motor %d\n", n);
-	motors[n] = 0.1;
+	motors[n] = 0.5;
 	delay(50); // ESP32 may need to wait until the end of the current cycle to change duty https://github.com/espressif/arduino-esp32/issues/5306
 	sendMotors();
 	pause(3);
