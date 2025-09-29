@@ -1,25 +1,72 @@
 {
   "version": "2.0.0",
+  "options": {
+    "env": {
+      "CMAKE_BUILD_PARALLEL_LEVEL": "4"
+    }
+  },
   "tasks": [
     {
-      "label": "Upload (ESP32 auto-port)",
+      "label": "deps",
       "type": "shell",
       "command": "powershell",
       "args": [
         "-Command",
-        "$port = (arduino-cli board list | Select-String 'ESP32S3' | ForEach-Object { ($_ -split '\\s+')[0] }); arduino-cli upload --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc -p $port flix"
+        "arduino-cli core update-index; arduino-cli core install esp32:esp32@3.2.1; arduino-cli lib update-index; arduino-cli lib install \"FlixPeriph\"; arduino-cli lib install \"MAVLink\"@2.0.16; New-Item -ItemType File -Path .dependencies -Force"
       ],
       "problemMatcher": []
     },
     {
-      "label": "Monitor (ESP32 auto-port)",
+      "label": "Board list",
       "type": "shell",
       "command": "powershell",
       "args": [
         "-Command",
-        "$port = (arduino-cli board list | Select-String 'ESP32S3' | ForEach-Object { ($_ -split '\\s+')[0] }); arduino-cli monitor -p $port -c baudrate=115200"
+        "arduino-cli board list"
       ],
       "problemMatcher": []
-    }
+    },
+    {
+      "label": "Compile",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-Command",
+        "$port = (arduino-cli board list | Select-String \"esp32:esp32:esp32_family\").ToString().Split()[0]; arduino-cli compile --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc flix"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Upload",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-Command",
+        "$port = (arduino-cli board list | Select-String \"esp32:esp32:esp32_family\").ToString().Split()[0]; arduino-cli upload --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc -p $port flix"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Compile and Upload",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-Command",
+        "$port = (arduino-cli board list | Select-String \"esp32:esp32:esp32_family\").ToString().Split()[0]; arduino-cli upload --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc -p $port flix"
+      ],
+      "dependsOn": ["Compile"],
+      "dependsOrder": "sequence",
+      "problemMatcher": []
+    },
+    {
+      "label": "Monitor",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-Command",
+        "$port = (arduino-cli board list | Select-String \"esp32:esp32:esp32_family\").ToString().Split()[0]; arduino-cli monitor -p $port -c baudrate=115200"
+      ],
+      "problemMatcher": []
+    },
   ]
 }
