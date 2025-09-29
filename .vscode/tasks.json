@@ -12,7 +12,7 @@
       "command": "powershell",
       "args": [
         "-Command",
-        "arduino-cli core update-index; arduino-cli core install esp32:esp32@3.2.1; arduino-cli lib update-index; arduino-cli lib install \"FlixPeriph\"; arduino-cli lib install \"MAVLink\"@2.0.16; New-Item -ItemType File -Path .dependencies -Force"
+        "arduino-cli core update-index; arduino-cli core install esp32:esp32@3.2.1; arduino-cli lib update-index; arduino-cli lib install \"FlixPeriph\"; arduino-cli lib install \"MAVLink\"@2.0.16"
       ],
       "problemMatcher": []
     },
