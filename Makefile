@@ -1,7 +1,7 @@
 # BOARD = esp32:esp32:esp32
 BOARD =  esp32:esp32:esp32s3:CDCOnBoot=cdc
 # esp32:esp32:esp32s3:CDCOnBoot=cdc,CPUFreq=240,FlashMode=qio,FlashSize=4M,LoopCore=1,PSRAM=enabled,PartitionScheme=default
-PORT := $(wildcard /dev/serial/by-id/usb-Silicon_Labs_CP21* /dev/serial/by-id/usb-Espressif_USB_JTAG_serial_debug_unit_98* /dev/serial/by-id/usb-1a86_USB_Serial* /dev/serial/by-id/usb-1a86_USB_Single_Serial_* /dev/cu.usbserial-* )
+PORT := $(wildcard /dev/serial/by-id/usb-Silicon_Labs_CP21* /dev/serial/by-id/usb-Espressif_USB_JTAG_serial_debug_unit_* /dev/serial/by-id/usb-1a86_USB_Serial* /dev/serial/by-id/usb-1a86_USB_Single_Serial_* /dev/cu.usbserial-* )
 PORT := $(strip $(PORT))
 
 build: .dependencies
