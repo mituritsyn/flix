@@ -7,9 +7,12 @@ PORT := $(strip $(PORT))
 build: .dependencies
 	arduino-cli compile --fqbn $(BOARD) flix
 
-upload: build
+upload: 
 	arduino-cli upload --fqbn $(BOARD) -p "$(PORT)" flix
 
+clean_upload: build
+	arduino-cli upload --fqbn $(BOARD) -p "$(PORT)" flix
+	
 monitor:
 	arduino-cli monitor -p "$(PORT)" -c baudrate=115200
 # ,dtr=off,rts=off
