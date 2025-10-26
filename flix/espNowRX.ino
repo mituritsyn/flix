@@ -3,7 +3,7 @@
 
 extern float controlRoll, controlPitch, controlThrottle, controlYaw;
 extern uint16_t channels[16];
-extern double controlTime;
+extern float controlTime;
 // Структура для получаемых данных (должна совпадать с отправителем)
 typedef struct {
   int8_t sticks[4];
@@ -39,7 +39,7 @@ void readEspNowRX() {
         controlRoll = packet.sticks[1] / 127.0f;
         controlPitch = packet.sticks[0] / 127.0f;
         // Convert [-127;127] to [0;1]
-        controlThrottle = (packet.sticks[3] + 127) / 254.0f;
+        controlThrottle = 0.7 * (packet.sticks[3] + 127) / 254.0f;
         controlYaw = packet.sticks[2] / 127.0f;
         controlTime = t;
     }

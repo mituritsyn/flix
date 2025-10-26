@@ -3,10 +3,10 @@
 
 // Fail-safe functions
 
-#define RC_LOSS_TIMEOUT 0.5
-#define DESCEND_TIME 3.0 // time to descend from full throttle to zero
+#define RC_LOSS_TIMEOUT 1
+#define DESCEND_TIME 10 // time to descend from full throttle to zero
 
-extern double controlTime;
+extern float controlTime;
 extern float controlRoll, controlPitch, controlThrottle, controlYaw;
 
 void failsafe() {
@@ -16,7 +16,7 @@ void failsafe() {
 
 // RC loss failsafe
 void rcLossFailsafe() {
-	if (mode == AUTO) return;
+	if (controlTime == 0) return;
 	if (!armed) return;
 	if (t - controlTime > RC_LOSS_TIMEOUT) {
 		descend();
@@ -25,14 +25,12 @@ void rcLossFailsafe() {
 
 // Smooth descend on RC lost
 void descend() {
-	mode = STAB;
-	controlRoll = 0;
-	controlPitch = 0;
-	controlYaw = 0;
-	controlThrottle -= dt / DESCEND_TIME;
-	if (controlThrottle < 0) {
+	mode = AUTO;
+	attitudeTarget = Quaternion();
+	thrustTarget -= dt / DESCEND_TIME;
+	if (thrustTarget < 0) {
+		thrustTarget = 0;
 		armed = false;
-		controlThrottle = 0;
 	}
 }
 

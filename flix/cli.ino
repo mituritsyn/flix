@@ -10,7 +10,7 @@
 extern const int MOTOR_REAR_LEFT, MOTOR_REAR_RIGHT, MOTOR_FRONT_RIGHT, MOTOR_FRONT_LEFT;
 extern const int ACRO, STAB, AUTO;
 extern float loopRate, dt;
-extern double t;
+extern float t;
 extern uint16_t channels[16];
 extern float controlRoll, controlPitch, controlThrottle, controlYaw, controlMode;
 extern int mode;

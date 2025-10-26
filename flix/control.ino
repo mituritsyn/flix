@@ -80,7 +80,7 @@ void interpretControls() {
 
 	if (mode == STAB) {
 		float yawTarget = attitudeTarget.getYaw();
-		if (invalid(yawTarget) || controlYaw != 0) yawTarget = attitude.getYaw(); // reset yaw target if NAN or pilot commands yaw rate
+		if (!armed || invalid(yawTarget) || controlYaw != 0) yawTarget = attitude.getYaw(); // reset yaw target
 		attitudeTarget = Quaternion::fromEuler(Vector(controlRoll * tiltMax, controlPitch * tiltMax, yawTarget));
 		ratesExtra = Vector(0, 0, -controlYaw * maxRate.z); // positive yaw stick means clockwise rotation in FLU
 	}
@@ -100,12 +100,7 @@ void interpretControls() {
 }
 
 void controlAttitude() {
-	if (!armed || attitudeTarget.invalid()) { // skip attitude control
-		rollPID.reset();
-		pitchPID.reset();
-		yawPID.reset();
-		return;
-	}
+	if (!armed || attitudeTarget.invalid() || thrustTarget < 0.1) return; // skip attitude control
 
 	const Vector up(0, 0, 1);
 	Vector upActual = Quaternion::rotateVector(up, attitude);
@@ -113,28 +108,23 @@ void controlAttitude() {
 
 	Vector error = Vector::rotationVectorBetween(upTarget, upActual);
 
-	ratesTarget.x = rollPID.update(error.x, dt) + ratesExtra.x;
-	ratesTarget.y = pitchPID.update(error.y, dt) + ratesExtra.y;
+	ratesTarget.x = rollPID.update(error.x) + ratesExtra.x;
+	ratesTarget.y = pitchPID.update(error.y) + ratesExtra.y;
 
 	float yawError = wrapAngle(attitudeTarget.getYaw() - attitude.getYaw());
-	ratesTarget.z = yawPID.update(yawError, dt) + ratesExtra.z;
+	ratesTarget.z = yawPID.update(yawError) + ratesExtra.z;
 }
 
 
 void controlRates() {
-	if (!armed || ratesTarget.invalid()) { // skip rates control
-		rollRatePID.reset();
-		pitchRatePID.reset();
-		yawRatePID.reset();
-		return;
-	}
+	if (!armed || ratesTarget.invalid() || thrustTarget < 0.1) return; // skip rates control
 
 	Vector error = ratesTarget - rates;
 
 	// Calculate desired torque, where 0 - no torque, 1 - maximum possible torque
-	torqueTarget.x = rollRatePID.update(error.x, dt);
-	torqueTarget.y = pitchRatePID.update(error.y, dt);
-	torqueTarget.z = yawRatePID.update(error.z, dt);
+	torqueTarget.x = rollRatePID.update(error.x);
+	torqueTarget.y = pitchRatePID.update(error.y);
+	torqueTarget.z = yawRatePID.update(error.z);
 }
 
 void controlTorque() {
@@ -145,7 +135,7 @@ void controlTorque() {
 		return;
 	}
 
-	if (thrustTarget < 0.05) {
+	if (thrustTarget < ARMED_THRUST) {
 		// minimal thrust to indicate armed state
 		motors[0] = ARMED_THRUST;
 		motors[1] = ARMED_THRUST;
@@ -154,10 +144,10 @@ void controlTorque() {
 		return;
 	}
 
-	motors[MOTOR_FRONT_LEFT] = thrustTarget + torqueTarget.x - torqueTarget.y + torqueTarget.z;
-	motors[MOTOR_FRONT_RIGHT] = thrustTarget - torqueTarget.x - torqueTarget.y - torqueTarget.z;
-	motors[MOTOR_REAR_LEFT] = thrustTarget + torqueTarget.x + torqueTarget.y - torqueTarget.z;
-	motors[MOTOR_REAR_RIGHT] = thrustTarget - torqueTarget.x + torqueTarget.y + torqueTarget.z;
+	motors[MOTOR_FRONT_LEFT] = thrustTarget + torqueTarget.x - torqueTarget.y - torqueTarget.z;
+	motors[MOTOR_FRONT_RIGHT] = thrustTarget - torqueTarget.x - torqueTarget.y + torqueTarget.z;
+	motors[MOTOR_REAR_LEFT] = thrustTarget + torqueTarget.x + torqueTarget.y + torqueTarget.z;
+	motors[MOTOR_REAR_RIGHT] = thrustTarget - torqueTarget.x + torqueTarget.y - torqueTarget.z;
 
 	motors[0] = constrain(motors[0], 0, 1);
 	motors[1] = constrain(motors[1], 0, 1);
